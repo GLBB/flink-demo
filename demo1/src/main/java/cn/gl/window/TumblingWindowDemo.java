@@ -1,6 +1,6 @@
 package cn.gl.window;
 
-import cn.gl.bean.SensorRecord;
+import cn.gl.bean.SensorTemperature;
 import cn.gl.common.SensorRecordMapper;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -23,10 +23,10 @@ public class TumblingWindowDemo {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         DataStreamSource<String> lineSource = env.socketTextStream("localhost", 8888);
-        SingleOutputStreamOperator<SensorRecord> sensorStream = lineSource.map(SensorRecordMapper::lineToSensorRecord);
-        KeyedStream<SensorRecord, String> keyedStream = sensorStream.keyBy(new KeySelector<SensorRecord, String>() {
+        SingleOutputStreamOperator<SensorTemperature> sensorStream = lineSource.map(SensorRecordMapper::lineToSensorRecord);
+        KeyedStream<SensorTemperature, String> keyedStream = sensorStream.keyBy(new KeySelector<SensorTemperature, String>() {
             @Override
-            public String getKey(SensorRecord sensorRecord) throws Exception {
+            public String getKey(SensorTemperature sensorRecord) throws Exception {
                 return sensorRecord.getId();
             }
         });
@@ -36,14 +36,14 @@ public class TumblingWindowDemo {
 //        sumStream.print("sumStream: ");
         
         SingleOutputStreamOperator<Tuple3<LocalDateTime, String, Double>> avgStream = keyedStream.window(TumblingProcessingTimeWindows.of(Time.seconds(10)))
-            .apply(new WindowFunction<SensorRecord, Tuple3<LocalDateTime, String, Double>, String, TimeWindow>() {
+            .apply(new WindowFunction<SensorTemperature, Tuple3<LocalDateTime, String, Double>, String, TimeWindow>() {
                 @Override
-                public void apply(String key, TimeWindow window, Iterable<SensorRecord> input, Collector<Tuple3<LocalDateTime, String, Double>> out) throws Exception {
+                public void apply(String key, TimeWindow window, Iterable<SensorTemperature> input, Collector<Tuple3<LocalDateTime, String, Double>> out) throws Exception {
                     long start = window.getStart();
                     long end = window.getEnd();
                     Double sum = 0.0;
                     int count = 0;
-                    for (SensorRecord sensorRecord : input) {
+                    for (SensorTemperature sensorRecord : input) {
                         sum += sensorRecord.getTemperature();
                         count += 1;
                     }

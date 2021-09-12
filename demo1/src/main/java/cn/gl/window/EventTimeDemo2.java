@@ -1,6 +1,6 @@
 package cn.gl.window;
 
-import cn.gl.bean.SensorRecord;
+import cn.gl.bean.SensorTemperature;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -21,21 +21,21 @@ public class EventTimeDemo2 {
         DataStream<String> inputStream = env.socketTextStream("localhost", 8888);
 
         // 转换成SensorReading类型，分配时间戳和watermark
-        DataStream<SensorRecord> dataStream = inputStream.map(line -> {
+        DataStream<SensorTemperature> dataStream = inputStream.map(line -> {
             String[] fields = line.split(",");
-            return new SensorRecord(fields[0], new Long(fields[1]), new Double(fields[2]));
-        }).assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<SensorRecord>(Time.seconds(2)) {
+            return new SensorTemperature(fields[0], new Long(fields[1]), new Double(fields[2]));
+        }).assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<SensorTemperature>(Time.seconds(2)) {
                 @Override
-                public long extractTimestamp(SensorRecord element) {
+                public long extractTimestamp(SensorTemperature element) {
                     return element.getEventTime() * 1000L;
                 }
             });
 
-        OutputTag<SensorRecord> outputTag = new OutputTag<SensorRecord>("late") {
+        OutputTag<SensorTemperature> outputTag = new OutputTag<SensorTemperature>("late") {
         };
 
         // 基于事件时间的开窗聚合，统计15秒内温度的最小值
-        SingleOutputStreamOperator<SensorRecord> minTempStream = dataStream.keyBy("id")
+        SingleOutputStreamOperator<SensorTemperature> minTempStream = dataStream.keyBy("id")
             .timeWindow(Time.seconds(15))
             .allowedLateness(Time.minutes(1))
             .sideOutputLateData(outputTag)
